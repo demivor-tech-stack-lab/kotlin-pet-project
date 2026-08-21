@@ -1,0 +1,46 @@
+# Cau hinh danh rieng cho test.
+# Rate limit TAT o day: bo test chay hang tram request trong vai giay,
+# neu bat thi test se do vi 429 chu khong phai vi code sai.
+# Rieng viec rate limit co hoat dong hay khong duoc kiem tra boi
+# RateLimitTest voi file cau hinh rieng.
+ktor:
+  deployment:
+    port: 0
+  application:
+    modules:
+      - com.vehiclerental.ApplicationKt.module
+
+app:
+  environment: dev
+  seedData: true
+  timezone: Asia/Ho_Chi_Minh
+
+database:
+  driver: "org.h2.Driver"
+  url: "jdbc:h2:mem:ratelimitdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;LOCK_TIMEOUT=10000;CASE_INSENSITIVE_IDENTIFIERS=TRUE"
+  user: "sa"
+  password: ""
+  poolSize: 10
+  connectionTimeoutMs: 10000
+  leakDetectionThresholdMs: 20000
+
+jwt:
+  secret: "test-secret-du-dai-32-ky-tu-tro-len-nhe-ban"
+  issuer: "vehicle-rental-api"
+  audience: "vehicle-rental-users"
+  realm: "Vehicle Rental Test"
+  accessTokenTtlSeconds: 900
+  refreshTokenTtlSeconds: 2592000
+
+cors:
+  allowAnyHost: true
+  allowedHosts: ""
+
+rateLimit:
+  enabled: true
+  authRequestsPerMinute: 3
+  globalRequestsPerMinute: 300
+
+metrics:
+  enabled: true
+  token: ""
