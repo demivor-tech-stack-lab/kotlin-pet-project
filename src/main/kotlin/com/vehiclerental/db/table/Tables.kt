@@ -41,7 +41,7 @@ object Vehicles : Table("vehicles") {
     val plateNumber = varchar("plate_number", 20).uniqueIndex()
     val brand = varchar("brand", 60)
     val model = varchar("model", 60)
-    val year = integer("year")
+    val year = integer("manufacture_year")   // ten cot khac ten thuoc tinh: "year" la tu khoa SQL
     // references() tạo FOREIGN KEY: không thể thêm xe với type_id không tồn tại
     val typeId = long("type_id").references(VehicleTypes.id)
     // TIỀN LUÔN DÙNG decimal, KHÔNG dùng double (double làm tròn sai: 0.1 + 0.2 != 0.3)
@@ -68,7 +68,30 @@ object Bookings : Table("bookings") {
 
     // Index (không unique) giúp truy vấn "tìm đơn của xe X" nhanh hơn khi dữ liệu lớn
     init {
-        index("idx_bookings_vehicle_id", isUnique = false, vehicleId)
+        index("idx_bookings_vehicle_status", isUnique = false, vehicleId, status, startAt, endAt)
         index("idx_bookings_user_id", isUnique = false, userId)
     }
+}
+
+/**
+ * Refresh token lưu trong DB để có thể THU HỒI.
+ *
+ * Access token (JWT) không thu hồi được — server không giữ trạng thái nào cả,
+ * token còn hạn là còn dùng được. Đó là lý do access token chỉ sống 15 phút.
+ * Refresh token thì ngược lại: sống 30 ngày nhưng nằm trong bảng này,
+ * nên logout / đổi mật khẩu / phát hiện bị đánh cắp là vô hiệu hóa được ngay.
+ *
+ * `tokenHash` lưu SHA-256 chứ không lưu token gốc — cùng nguyên tắc với mật khẩu.
+ */
+object RefreshTokens : Table("refresh_tokens") {
+    val id = long("id").autoIncrement()
+    val userId = long("user_id").references(Users.id)
+    val tokenHash = varchar("token_hash", 64).uniqueIndex()
+    val expiresAt = datetime("expires_at")
+    val revokedAt = datetime("revoked_at").nullable()
+    val createdAt = datetime("created_at")
+    val userAgent = varchar("user_agent", 255).nullable()
+    val ipAddress = varchar("ip_address", 64).nullable()
+
+    override val primaryKey = PrimaryKey(id)
 }
