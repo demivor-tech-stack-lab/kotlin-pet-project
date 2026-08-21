@@ -39,3 +39,9 @@ bin/
 # QUAN TRỌNG: *.jar ở trên loại trừ cả gradle-wrapper.jar,
 # nhưng file này BẮT BUỘC phải commit thì người khác mới chạy được ./gradlew
 !gradle/wrapper/gradle-wrapper.jar
+
+# Bien moi truong chua secret - KHONG BAO GIO commit
+.env
+.env.local
+.env.production
+!.env.example

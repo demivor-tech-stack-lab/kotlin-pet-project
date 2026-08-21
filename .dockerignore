@@ -1,0 +1,17 @@
+# Khong copy nhung thu nay vao build context: build nhanh hon va
+# tranh vo tinh dong goi file bi mat vao image.
+.git
+.gitignore
+.idea
+.vscode
+build
+.gradle
+.kotlin
+docs
+*.md
+api.http
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+Dockerfile

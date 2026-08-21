@@ -1,0 +1,107 @@
+# =====================================================================
+# TRIEN KHAI TREN VPS
+#
+#   cp .env.example .env      # roi sua cac gia tri trong .env
+#   docker compose up -d --build
+#   docker compose logs -f api
+#
+# Kien truc: nginx/Caddy (ben ngoai) -> api:8080 -> db:5432
+# Cong cua API va Postgres CHI mo tren 127.0.0.1, khong phoi ra Internet.
+# =====================================================================
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vehiclerental}
+      POSTGRES_USER: ${POSTGRES_USER:-vehiclerental}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong file .env}
+      # Bat checksum de phat hien du lieu bi hong o tang dia
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      # Named volume: du lieu SONG SOT qua `docker compose down` va qua ca
+      # viec build lai image. Chi bi xoa khi chay `docker compose down -v`.
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # 127.0.0.1 o dau: chi truy cap duoc TU CHINH VPS (qua SSH tunnel).
+      # Viet "5432:5432" khong thoi la mo cong Postgres ra ca Internet -
+      # loi cau hinh dan toi bi tan cong pho bien nhat khi tu quan VPS.
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vehiclerental} -d ${POSTGRES_DB:-vehiclerental}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [backend]
+    logging: &default_logging
+      driver: json-file
+      options:
+        # Khong gioi han log la mot ngay nao do o cung day 100% - va
+        # do la kieu su co rat kho doan ra nguyen nhan.
+        max-size: "10m"
+        max-file: "5"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Cho Postgres THUC SU san sang, khong chi la "container da chay".
+        # Thieu dieu kien nay thi api khoi dong trong luc DB chua nhan ket noi
+        # -> Flyway loi -> container restart lien tuc.
+        condition: service_healthy
+    environment:
+      APP_ENV: prod
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
+      SEED_DATA: "false"
+
+      DB_DRIVER: org.postgresql.Driver
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-vehiclerental}
+      DB_USER: ${POSTGRES_USER:-vehiclerental}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong file .env}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+
+      JWT_SECRET: ${JWT_SECRET:?Thieu JWT_SECRET - sinh bang: openssl rand -base64 48}
+      JWT_ISSUER: ${JWT_ISSUER:-vehicle-rental-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vehicle-rental-users}
+      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
+      JWT_REFRESH_TTL_SECONDS: ${JWT_REFRESH_TTL_SECONDS:-2592000}
+
+      CORS_ALLOW_ANY_HOST: "false"
+      CORS_ALLOWED_HOSTS: ${CORS_ALLOWED_HOSTS:?Thieu CORS_ALLOWED_HOSTS, vd: app.example.com}
+
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+      RATE_LIMIT_GLOBAL_PER_MINUTE: ${RATE_LIMIT_GLOBAL_PER_MINUTE:-300}
+
+      METRICS_ENABLED: "true"
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+
+      # Ghi log dang JSON de cong cu thu thap log doc duoc
+      JAVA_TOOL_OPTIONS: "-Dlogback.configurationFile=logback-prod.xml"
+    ports:
+      # Chi mo cho reverse proxy tren cung may. HTTPS do nginx/Caddy dam nhiem.
+      - "127.0.0.1:8080:8080"
+    networks: [backend]
+    # Cho ung dung 20 giay de xu ly not request dang chay truoc khi bi giet cung.
+    # Phai lon hon ktor.deployment.shutdownGracePeriod trong application.yaml.
+    stop_grace_period: 20s
+    deploy:
+      resources:
+        limits:
+          # Dat gioi han de mot su co ro ri bo nho khong keo sap ca VPS.
+          # JVM tu tinh heap = 75% cua con so nay (xem MaxRAMPercentage).
+          memory: ${API_MEMORY_LIMIT:-768M}
+    logging: *default_logging
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:
+    driver: bridge
