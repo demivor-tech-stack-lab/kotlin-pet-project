@@ -1,5 +1,21 @@
 # 📝 60 Câu Hỏi Kiểm Tra Hiểu Dự Án
 
+> ⚠️ **LƯU Ý VỀ PHIÊN BẢN**
+>
+> Bộ tài liệu này được viết cho **phiên bản pet project ban đầu**. Dự án sau đó đã
+> được nâng cấp lên production-ready, nên một số câu trả lời/bài tập mô tả các lỗ hổng
+> **giờ đã được vá**. Điều đó KHÔNG làm tài liệu mất giá trị — ngược lại: hiểu lỗ hổng
+> trước rồi mới xem cách vá là cách học hiệu quả nhất.
+>
+> Chỗ nào đã đổi và vì sao: xem **[`PRODUCTION-CHANGES.md`](PRODUCTION-CHANGES.md)**.
+>
+> Vài điểm khác so với code hiện tại: mật khẩu tài khoản mẫu giờ là `matkhau123`
+> (không phải `123456`); đăng nhập trả về `accessToken` + `refreshToken` chứ không
+> phải một trường `token`; repository **không** còn tự mở transaction.
+
+---
+
+
 Cách dùng:
 - Trả lời bằng lời của bạn, **không nhìn đáp án trước**.
 - Với câu có nhắc tên file → mở file đó ra đọc rồi trả lời.

@@ -1,4 +1,20 @@
-# 🛠️ 15 Bài Tập Code Thật
+# 🛠️ 20 Bài Tập Code Thật
+
+> ⚠️ **LƯU Ý VỀ PHIÊN BẢN**
+>
+> Bộ tài liệu này được viết cho **phiên bản pet project ban đầu**. Dự án sau đó đã
+> được nâng cấp lên production-ready, nên một số câu trả lời/bài tập mô tả các lỗ hổng
+> **giờ đã được vá**. Điều đó KHÔNG làm tài liệu mất giá trị — ngược lại: hiểu lỗ hổng
+> trước rồi mới xem cách vá là cách học hiệu quả nhất.
+>
+> Chỗ nào đã đổi và vì sao: xem **[`PRODUCTION-CHANGES.md`](PRODUCTION-CHANGES.md)**.
+>
+> Vài điểm khác so với code hiện tại: mật khẩu tài khoản mẫu giờ là `matkhau123`
+> (không phải `123456`); đăng nhập trả về `accessToken` + `refreshToken` chứ không
+> phải một trường `token`; repository **không** còn tự mở transaction.
+
+---
+
 
 Mỗi bài có: **mục tiêu học** → **yêu cầu** → **gợi ý** → **cách tự kiểm tra**.
 Làm theo thứ tự. Sau mỗi bài chạy `gradlew.bat test` — **phải xanh** mới đi tiếp.
@@ -34,8 +50,10 @@ Làm theo thứ tự. Sau mỗi bài chạy `gradlew.bat test` — **phải xanh
 
 ---
 
-### Bài 3 — Thêm bộ lọc mới
+### Bài 3 — Thêm bộ lọc mới &nbsp;`✅ ĐÃ CÓ SẴN`
 **Học:** cách ghép điều kiện động trong Exposed.
+
+**Đã được hiện thực trong bản production** — hãy đọc `VehicleRepositoryImpl.baseQuery()` và đối chiếu với cách bạn định làm.
 
 **Yêu cầu:** thêm query param `minPricePerDay` cho `GET /api/vehicles`
 (dùng chung được với `maxPricePerDay`).
@@ -83,7 +101,9 @@ Giá trị không hợp lệ → `AppException.BadRequest`, không được im l
 
 ---
 
-### Bài 7 — Lịch bận của xe
+### Bài 7 — Lịch bận của xe &nbsp;`✅ ĐÃ CÓ SẴN`
+**Đã được hiện thực** (`GET /api/vehicles/{id}/availability`) — đọc `BookingService.busyPeriods()`. Bài tập còn lại cho bạn: thêm tham số lọc `from` / `to`.
+
 **Yêu cầu:** `GET /api/vehicles/{id}/availability?from=...&to=...` trả về danh sách khoảng
 thời gian đã bị đặt (chỉ `PENDING` + `CONFIRMED`). Endpoint **công khai**.
 
@@ -92,7 +112,7 @@ thời gian đã bị đặt (chỉ `PENDING` + `CONFIRMED`). Endpoint **công k
 
 ---
 
-### Bài 8 — Không cho khách hủy sát giờ
+### Bài 8 — Không cho khách hủy sát giờ &nbsp;`✅ ĐÃ CÓ SẴN`
 **Yêu cầu:** chỉ cho hủy nếu còn **ít nhất 24 giờ** trước `startAt`. ADMIN thì vẫn hủy được bất kỳ lúc nào.
 
 **Gợi ý:** sửa `BookingService.cancel()`. Hằng số đặt trong `companion object`.
@@ -102,7 +122,7 @@ Chú ý: `requester.role == UserRole.ADMIN` là điều kiện miễn trừ.
 
 ---
 
-### Bài 9 — Thống kê cho admin
+### Bài 9 — Thống kê cho admin &nbsp;`✅ ĐÃ CÓ SẴN`
 **Yêu cầu:** `GET /api/admin/stats` trả về: tổng số xe, số xe theo từng trạng thái,
 tổng số đơn theo từng trạng thái, tổng doanh thu từ đơn `COMPLETED`.
 
@@ -115,7 +135,7 @@ Với doanh thu dùng `Bookings.totalPrice.sum()`. Nhớ: `sum()` trả về `nu
 
 ---
 
-### Bài 10 — Đổi mật khẩu
+### Bài 10 — Đổi mật khẩu &nbsp;`✅ ĐÃ CÓ SẴN`
 **Yêu cầu:** `POST /api/auth/change-password` với body `{oldPassword, newPassword}`.
 Sai mật khẩu cũ → 401. Mật khẩu mới trùng mật khẩu cũ → 400.
 
@@ -147,7 +167,7 @@ Test hàm `suspend` thì bọc trong `runBlocking { }`.
 
 ---
 
-### Bài 12 — Sửa lỗi mất nhất quán dữ liệu ⚠️
+### Bài 12 — Sửa lỗi mất nhất quán dữ liệu &nbsp;`✅ ĐÃ SỬA`
 **Học:** transaction — kiến thức bắt buộc để làm task thật.
 
 **Yêu cầu:** hiện tại `BookingService.confirm()` gọi 2 lần update trong **2 transaction riêng**.
@@ -168,7 +188,7 @@ DatabaseFactory.dbQuery {
 
 ---
 
-### Bài 13 — Chuyển sang PostgreSQL + Flyway
+### Bài 13 — Chuyển sang PostgreSQL + Flyway &nbsp;`✅ ĐÃ LÀM`
 **Yêu cầu:** thay H2 bằng PostgreSQL, thay `SchemaUtils.create()` bằng migration Flyway.
 
 **Gợi ý:** cần cài Docker Desktop. Viết `docker-compose.yml`, thêm dependency
@@ -180,7 +200,7 @@ DatabaseFactory.dbQuery {
 
 ---
 
-### Bài 14 — Refresh token
+### Bài 14 — Refresh token &nbsp;`✅ ĐÃ LÀM`
 **Yêu cầu:** access token sống 15 phút, refresh token sống 7 ngày, lưu trong bảng `refresh_tokens`.
 Thêm `POST /api/auth/refresh` và `POST /api/auth/logout` (xóa refresh token).
 
@@ -196,6 +216,34 @@ Khi `complete()` một đơn, tính phí trả muộn bằng `PricingPolicy.calc
 
 **Gợi ý:** `complete()` cần nhận thêm `actualReturnAt`. Suy nghĩ: nên đặt nó vào body request
 hay lấy `LocalDateTime.now()`? (gợi ý: cái nào test được?)
+
+---
+
+---
+
+## 🎁 Bài tập MỚI cho bản production
+
+### Bài 16 — Cho phép admin hạ quyền / khóa tài khoản
+Thêm cột `is_active` (nhớ viết migration `V3__...sql`, **không** sửa V1).
+Tài khoản bị khóa: không đăng nhập được, **và** mọi refresh token bị thu hồi ngay.
+Suy nghĩ: access token đang còn hạn thì sao? Vì sao 15 phút lại quan trọng ở đây?
+
+### Bài 17 — Đưa rate limit sang Redis
+Bộ đếm hiện nằm trong bộ nhớ từng tiến trình. Chạy 2 bản sao là giới hạn nhân đôi.
+Viết một `RateLimiter` dùng Redis để chính xác khi scale ngang.
+
+### Bài 18 — Chặn trùng lịch bằng ràng buộc DB
+Hiện tại chống đua bằng khóa dòng ở tầng ứng dụng. Hãy thêm lớp bảo vệ thứ hai
+ở tầng database bằng `EXCLUDE USING gist` của PostgreSQL, rồi bắt lỗi đó trả 409.
+Vì sao có hai lớp lại tốt hơn một?
+
+### Bài 19 — Test với đồng hồ giả
+`FixedTimeProvider` đã viết sẵn nhưng **chưa test nào dùng**. Viết `AuthServiceTest`
+dùng nó để kiểm tra "refresh token hết hạn sau 30 ngày" — trong vài mili giây.
+
+### Bài 20 — Sinh tài liệu OpenAPI
+Viết `openapi.yaml` mô tả toàn bộ endpoint, phục vụ qua `/docs` bằng plugin
+`ktor-server-swagger`. Đây là thứ mà mọi API dùng chung với đội frontend đều cần.
 
 ---
 

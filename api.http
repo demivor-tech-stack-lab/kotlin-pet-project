@@ -5,36 +5,46 @@
 
 @host = http://localhost:8080
 
-### ---------------------------------------------------------------- HEALTH
-GET {{host}}/api/health
+### ================================================================== VẬN HÀNH
 
-### ---------------------------------------------------------------- ĐĂNG NHẬP ADMIN
+### Liveness — KHÔNG chạm database. Trả NO thì Docker sẽ RESTART container.
+GET {{host}}/health/live
+
+### Readiness — CÓ kiểm tra database. Trả NO thì tạm ngừng gửi request, KHÔNG restart.
+GET {{host}}/health/ready
+
+### Metrics cho Prometheus. Ở production nhớ chặn endpoint này tại reverse proxy.
+GET {{host}}/metrics
+
+### ================================================================== XÁC THỰC
+
+### Đăng nhập ADMIN
 # @name loginAdmin
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
   "email": "admin@vehiclerental.com",
-  "password": "123456"
+  "password": "matkhau123"
 }
 
-### Lưu token admin lại để các request sau dùng
-@adminToken = {{loginAdmin.response.body.token}}
+### Lưu token admin cho các request sau
+@adminToken = {{loginAdmin.response.body.accessToken}}
 
-### ---------------------------------------------------------------- ĐĂNG NHẬP KHÁCH
+### Đăng nhập KHÁCH
 # @name loginCustomer
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
   "email": "khach@vehiclerental.com",
-  "password": "123456"
+  "password": "matkhau123"
 }
 
-### @name customerToken
-@customerToken = {{loginCustomer.response.body.token}}
+@customerToken = {{loginCustomer.response.body.accessToken}}
+@customerRefresh = {{loginCustomer.response.body.refreshToken}}
 
-### ---------------------------------------------------------------- ĐĂNG KÝ MỚI
+### Đăng ký mới — trả về CẢ accessToken (15 phút) LẪN refreshToken (30 ngày)
 POST {{host}}/api/auth/register
 Content-Type: application/json
 
@@ -45,26 +55,86 @@ Content-Type: application/json
   "phone": "0912345678"
 }
 
-### Đăng ký với mật khẩu yếu -> 400 WEAK_PASSWORD
+### Mật khẩu dưới 8 ký tự -> 400 WEAK_PASSWORD
 POST {{host}}/api/auth/register
 Content-Type: application/json
 
 {
   "email": "yeu@example.com",
-  "password": "123",
+  "password": "1234567",
   "fullName": "B",
   "phone": "0912345678"
 }
 
-### ---------------------------------------------------------------- TÔI LÀ AI
+### Sai mật khẩu -> 401. Thông báo GIỐNG HỆT trường hợp email không tồn tại,
+### để kẻ tấn công không dò được email nào có thật.
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@vehiclerental.com",
+  "password": "sai-mat-khau"
+}
+
+### ⏱ RATE LIMIT: chạy request trên 11 lần liên tiếp -> từ lần thứ 11 nhận 429 RATE_LIMITED
+
+### ------------------------------------------------------------ REFRESH TOKEN
+
+### Đổi refresh token lấy access token mới.
+### Token cũ bị THU HỒI ngay (xoay vòng) — chạy lại lần 2 với cùng token sẽ nhận 401.
+# @name refresh
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{customerRefresh}}"
+}
+
+@newRefresh = {{refresh.response.body.refreshToken}}
+
+### Dùng lại token CŨ -> 401. Đây chính là cơ chế phát hiện token bị đánh cắp.
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{customerRefresh}}"
+}
+
+### Đăng xuất thiết bị này (không cần access token còn hạn)
+POST {{host}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{newRefresh}}"
+}
+
+### Đăng xuất TẤT CẢ thiết bị
+POST {{host}}/api/auth/logout-all
+Authorization: Bearer {{customerToken}}
+
+### Đổi mật khẩu — thu hồi toàn bộ phiên đăng nhập trên mọi thiết bị
+POST {{host}}/api/auth/change-password
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "oldPassword": "matkhau123",
+  "newPassword": "matkhaumoi456"
+}
+
+### Tôi là ai
 GET {{host}}/api/auth/me
 Authorization: Bearer {{customerToken}}
 
 ### Gọi mà không có token -> 401
 GET {{host}}/api/auth/me
 
-### ---------------------------------------------------------------- XE
+### ================================================================== XE
+
 GET {{host}}/api/vehicle-types
+
+### Chi tiết một loại xe
+GET {{host}}/api/vehicle-types/1
 
 ### Toàn bộ xe
 GET {{host}}/api/vehicles
@@ -72,19 +142,32 @@ GET {{host}}/api/vehicles
 ### Phân trang
 GET {{host}}/api/vehicles?page=1&size=2
 
-### Lọc: chỉ xe đang rảnh, thuộc loại 2, giá tối đa 800k
-GET {{host}}/api/vehicles?status=AVAILABLE&typeId=2&maxPricePerDay=800000
+### size quá lớn bị kẹp về 50 — chặn client làm sập server
+GET {{host}}/api/vehicles?size=100000
+
+### Lọc theo khoảng giá
+GET {{host}}/api/vehicles?minPricePerDay=600000&maxPricePerDay=800000
+
+### Lọc: chỉ xe đang rảnh, thuộc loại 2
+GET {{host}}/api/vehicles?status=AVAILABLE&typeId=2
 
 ### Tìm theo từ khóa (brand / model / biển số)
 GET {{host}}/api/vehicles?keyword=toyota
 
+### status sai -> 400 kèm danh sách giá trị hợp lệ (không im lặng bỏ qua bộ lọc)
+GET {{host}}/api/vehicles?status=KHONG_CO_THAT
+
 ### Chi tiết một xe
 GET {{host}}/api/vehicles/3
+
+### Lịch bận của xe — CÔNG KHAI, cố ý không trả userId
+GET {{host}}/api/vehicles/3/availability
 
 ### Xe không tồn tại -> 404
 GET {{host}}/api/vehicles/999999
 
-### ---------------------------------------------------------------- ADMIN: THÊM XE
+### ================================================================== ADMIN: XE
+
 POST {{host}}/api/admin/vehicles
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -112,7 +195,7 @@ Content-Type: application/json
   "pricePerDay": "550000"
 }
 
-### ADMIN: cho xe vào bảo dưỡng
+### Cho xe vào bảo dưỡng
 PATCH {{host}}/api/admin/vehicles/1/status
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -121,7 +204,13 @@ Content-Type: application/json
   "status": "MAINTENANCE"
 }
 
-### ---------------------------------------------------------------- BÁO GIÁ
+### Thống kê tổng quan (3 truy vấn trong 1 transaction -> số liệu nhất quán)
+GET {{host}}/api/admin/stats
+Authorization: Bearer {{adminToken}}
+
+### ================================================================== ĐẶT XE
+
+### Báo giá thử — không ghi gì vào DB
 POST {{host}}/api/bookings/quote
 Authorization: Bearer {{customerToken}}
 Content-Type: application/json
@@ -132,7 +221,7 @@ Content-Type: application/json
   "endAt": "2026-12-04T08:00:00"
 }
 
-### ---------------------------------------------------------------- ĐẶT XE
+### Đặt xe
 # @name createBooking
 POST {{host}}/api/bookings
 Authorization: Bearer {{customerToken}}
@@ -145,10 +234,10 @@ Content-Type: application/json
   "note": "Nhan xe tai san bay"
 }
 
-### @name bookingId
 @bookingId = {{createBooking.response.body.id}}
 
 ### Đặt trùng lịch -> 409 BOOKING_OVERLAP
+### (chạy 8 request này CÙNG LÚC thì vẫn chỉ đúng 1 cái thành công — xem ConcurrencyTest)
 POST {{host}}/api/bookings
 Authorization: Bearer {{customerToken}}
 Content-Type: application/json
@@ -170,7 +259,7 @@ Content-Type: application/json
   "endAt": "2026-12-01T08:00:00"
 }
 
-### Đặt quá 30 ngày -> 400 PERIOD_TOO_LONG
+### Thuê quá 30 ngày -> 400 PERIOD_TOO_LONG
 POST {{host}}/api/bookings
 Authorization: Bearer {{customerToken}}
 Content-Type: application/json
@@ -181,7 +270,8 @@ Content-Type: application/json
   "endAt": "2027-02-01T08:00:00"
 }
 
-### ---------------------------------------------------------------- XEM ĐƠN
+### ------------------------------------------------------------ XEM ĐƠN
+
 GET {{host}}/api/bookings/my
 Authorization: Bearer {{customerToken}}
 
@@ -193,11 +283,12 @@ Authorization: Bearer {{customerToken}}
 GET {{host}}/api/bookings/{{bookingId}}
 Authorization: Bearer {{customerToken}}
 
-### ---------------------------------------------------------------- ADMIN DUYỆT ĐƠN
+### ------------------------------------------------------------ ADMIN DUYỆT ĐƠN
+
 GET {{host}}/api/admin/bookings
 Authorization: Bearer {{adminToken}}
 
-### Duyệt: PENDING -> CONFIRMED (xe chuyển sang RENTED)
+### Duyệt: PENDING -> CONFIRMED. Ghi vào 2 BẢNG trong 1 TRANSACTION.
 PATCH {{host}}/api/admin/bookings/{{bookingId}}/confirm
 Authorization: Bearer {{adminToken}}
 
@@ -212,13 +303,25 @@ Authorization: Bearer {{adminToken}}
 PATCH {{host}}/api/admin/bookings/{{bookingId}}/complete
 Authorization: Bearer {{adminToken}}
 
-### ---------------------------------------------------------------- HỦY ĐƠN
+### ------------------------------------------------------------ HỦY ĐƠN
+
+### Khách chỉ hủy được khi còn ít nhất 24 giờ trước giờ nhận xe
 PATCH {{host}}/api/bookings/{{bookingId}}/cancel
 Authorization: Bearer {{customerToken}}
 
-### ---------------------------------------------------------------- LỖI KHÁC
-### Endpoint không tồn tại -> 404 ROUTE_NOT_FOUND
+### ADMIN thì hủy được bất kỳ lúc nào
+PATCH {{host}}/api/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{adminToken}}
+
+### ================================================================== LỖI KHÁC
+
+### Endpoint không tồn tại -> 404 ROUTE_NOT_FOUND (JSON, không phải HTML)
 GET {{host}}/api/khong-ton-tai
 
 ### id không phải số -> 400
 GET {{host}}/api/vehicles/abc
+
+### Gửi kèm X-Request-Id của riêng mình — server sẽ giữ nguyên mã đó trong log
+### và trả lại trong response header. Dùng để truy vết xuyên nhiều dịch vụ.
+GET {{host}}/api/vehicles
+X-Request-Id: ma-cua-toi-12345

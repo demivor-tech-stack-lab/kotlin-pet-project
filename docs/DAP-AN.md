@@ -1,5 +1,21 @@
 # ✅ Đáp Án — 60 Câu Hỏi
 
+> ⚠️ **LƯU Ý VỀ PHIÊN BẢN**
+>
+> Bộ tài liệu này được viết cho **phiên bản pet project ban đầu**. Dự án sau đó đã
+> được nâng cấp lên production-ready, nên một số câu trả lời/bài tập mô tả các lỗ hổng
+> **giờ đã được vá**. Điều đó KHÔNG làm tài liệu mất giá trị — ngược lại: hiểu lỗ hổng
+> trước rồi mới xem cách vá là cách học hiệu quả nhất.
+>
+> Chỗ nào đã đổi và vì sao: xem **[`PRODUCTION-CHANGES.md`](PRODUCTION-CHANGES.md)**.
+>
+> Vài điểm khác so với code hiện tại: mật khẩu tài khoản mẫu giờ là `matkhau123`
+> (không phải `123456`); đăng nhập trả về `accessToken` + `refreshToken` chứ không
+> phải một trường `token`; repository **không** còn tự mở transaction.
+
+---
+
+
 > Chỉ mở file này **sau khi** đã tự trả lời. Đáp án ghi ngắn gọn phần cốt lõi;
 > nếu bạn diễn đạt khác nhưng đúng ý thì vẫn tính là đúng.
 
@@ -301,7 +317,8 @@ khác → `409 INVALID_STATE`. Không tồn tại hàm nào set về `PENDING` s
 Nếu (1) thành công mà (2) hỏng (mất kết nối DB chẳng hạn) → **dữ liệu không nhất quán**:
 đơn đã duyệt nhưng xe vẫn hiện AVAILABLE, người khác có thể đặt tiếp.
 
-👉 **Cách sửa:** gói cả hai vào **một transaction** để hoặc cùng thành công, hoặc cùng
+👉 **ĐÃ ĐƯỢC SỬA trong bản production** (xem `PRODUCTION-CHANGES.md` mục 1.1).
+Cách sửa: gói cả hai vào **một transaction** để hoặc cùng thành công, hoặc cùng
 bị rollback. Hiện tại mỗi repository tự mở transaction riêng (`dbQuery{}` bọc từng hàm).
 Cách làm: thêm vào `BookingService`
 ```kotlin
@@ -318,6 +335,10 @@ DatabaseFactory.dbQuery {
 - A insert. B insert. → Hai đơn trùng lịch cùng tồn tại.
 
 Khoảng thời gian giữa "kiểm tra" và "ghi" gọi là **TOCTOU** (time-of-check to time-of-use).
+
+👉 **ĐÃ ĐƯỢC SỬA trong bản production** bằng hướng 1 (khóa dòng), cộng thêm một
+chi tiết mà đáp án gốc bỏ sót: phải dùng mức cô lập `READ_COMMITTED`, vì
+`REPEATABLE_READ` làm khóa dòng trở nên vô dụng. Xem `PRODUCTION-CHANGES.md` mục 1.2.
 
 Hai hướng khắc phục:
 1. **Khóa ở DB**: `SELECT ... FOR UPDATE` trên dòng xe trước khi kiểm tra, buộc B phải chờ A xong.
