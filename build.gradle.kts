@@ -8,6 +8,10 @@ val h2_version: String by project
 val hikari_version: String by project
 val koin_version: String by project
 val bcrypt_version: String by project
+val flyway_version: String by project
+val postgres_version: String by project
+val micrometer_version: String by project
+val logstash_encoder_version: String by project
 
 plugins {
     kotlin("jvm") version "2.0.0"
@@ -52,12 +56,19 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt-jvm")            // xác thực bằng JWT
     implementation("io.ktor:ktor-server-cors-jvm")                // cho phép gọi từ FE khác domain
     implementation("io.ktor:ktor-server-default-headers-jvm")
+    implementation("io.ktor:ktor-server-forwarded-header-jvm")    // doc IP that sau reverse proxy
+    implementation("io.ktor:ktor-server-call-id-jvm")             // gan request-id vao moi log
+    implementation("io.ktor:ktor-server-rate-limit-jvm")          // chan bruteforce dang nhap
+    implementation("io.ktor:ktor-server-metrics-micrometer-jvm")  // /metrics cho Prometheus
+    implementation("io.micrometer:micrometer-registry-prometheus:$micrometer_version")
 
     // ----- Database: Exposed (ORM của JetBrains) + H2 + connection pool -----
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version") // cột kiểu LocalDateTime
-    implementation("com.h2database:h2:$h2_version")
+    implementation("com.h2database:h2:$h2_version")                    // dev/test
+    implementation("org.postgresql:postgresql:$postgres_version")      // production
+    implementation("org.flywaydb:flyway-core:$flyway_version")         // migration co phien ban
     implementation("com.zaxxer:HikariCP:$hikari_version")
 
     // ----- Dependency Injection -----
@@ -69,6 +80,7 @@ dependencies {
 
     // ----- Log -----
     implementation("ch.qos.logback:logback-classic:$logback_version")
+    implementation("net.logstash.logback:logstash-logback-encoder:$logstash_encoder_version") // log JSON cho prod
 
     // ----- Test -----
     testImplementation("io.ktor:ktor-server-test-host-jvm")
