@@ -1,0 +1,109 @@
+# 🚗 Vehicle Rental API - Dự Án Pet Project Kotlin
+
+Tài liệu này tổng hợp hướng dẫn tự thực hiện dự án **Vehicle Rental API** sử dụng Ktor, PostgreSQL và Docker.
+
+---
+
+## 🗺️ Lộ Trình Thực Hiện (Roadmap)
+
+```mermaid
+graph TD
+    A[Phase 1: Thiết kế] --> B[Phase 2: Setup Project]
+    B --> C[Phase 3: Core Features]
+    C --> D[Phase 4: Advanced Features]
+    D --> E[Phase 5: Polish & Deploy]
+```
+
+1.  **Phase 1: Thiết kế (1-2 ngày)**: Database Schema + API Design.
+2.  **Phase 2: Setup Project (1 ngày)**: Ktor + PostgreSQL + Docker.
+3.  **Phase 3: Core Features (1-2 tuần)**: Auth → Vehicle → Booking → Contract.
+4.  **Phase 4: Advanced (1 tuần)**: Pricing + Penalty + Reports.
+5.  **Phase 5: Polish (2-3 ngày)**: Testing + Docs + Deploy.
+
+---
+
+## 🛠️ Tech Stack & Công Cụ
+
+### Backend Stack
+- **Framework**: Ktor (Kotlin-native, Coroutines built-in).
+- **ORM**: Exposed (JetBrains).
+- **Database**: PostgreSQL.
+- **Migration**: Flyway.
+- **Dependency Injection**: Koin.
+- **Auth**: JWT (JSON Web Token).
+- **Containerization**: Docker & Docker Compose.
+
+### Công Cụ Thiết Kế
+- **Database**: [dbdiagram.io](https://dbdiagram.io) (Vẽ ERD bằng code).
+- **API Design**: [Postman](https://www.postman.com/) hoặc [Bruno](https://www.usebruno.com/).
+- **UI/UX Reference**: [Figma](https://www.figma.com/), [Dribbble](https://dribbble.com/), [Behance](https://www.behance.net/).
+
+---
+
+## 🗄️ Database Schema Gợi Ý
+
+Bạn nên thiết kế các thực thể (entities) sau:
+- **users**: Lưu thông tin người dùng (Khách hàng, Admin).
+- **vehicles**: Thông tin chi tiết về xe (Biển số, model, trạng thái).
+- **vehicle_types**: Phân loại xe (Xe máy, Ô tô 4 chỗ, Ô tô 7 chỗ...).
+- **bookings**: Thông tin đặt xe (User nào đặt xe nào, từ lúc nào đến lúc nào).
+- **contracts**: Hợp đồng thuê xe sau khi nhận xe.
+- **payments**: Hóa đơn, tiền cọc, thanh toán cuối cùng.
+- **penalties**: Thông tin vi phạm (trả xe muộn, hỏng hóc).
+
+---
+
+## 📡 Danh Sách API Endpoints (Gợi ý)
+
+### 🔐 Auth
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+
+### 🚗 Vehicles
+- `GET /api/vehicles` (Danh sách xe + Filter)
+- `GET /api/vehicles/{id}` (Chi tiết xe)
+- `POST /api/admin/vehicles` (Thêm xe mới - Admin only)
+
+### 📅 Bookings
+- `POST /api/bookings` (Tạo yêu cầu đặt xe)
+- `GET /api/bookings/my` (Xem danh sách xe mình đã/đang đặt)
+- `PATCH /api/bookings/{id}/cancel` (Hủy đặt xe)
+
+---
+
+## 📂 Cấu Trúc Thư Mục Move
+
+```text
+vehicle-rental-api/
+├── src/main/kotlin/
+│   ├── Application.kt      # Entry point
+│   ├── plugins/            # Ktor plugins (Routing, Serialization, Security)
+│   ├── routes/             # Định nghĩa API endpoints
+│   ├── services/           # Logic xử lý nghiệp vụ
+│   ├── repositories/       # Truy vấn Database (Exposed)
+│   ├── models/             # Data classes (DTOs & Entities)
+│   └── utils/              # Tiện ích bổ trợ
+├── src/main/resources/
+│   ├── application.conf    # Cấu hình server/db
+│   └── db/migration/       # File SQL cho Flyway
+├── docker-compose.yml      # Chạy PostgreSQL nhanh
+└── build.gradle.kts        # Quản lý dependencies
+```
+
+---
+
+## 📚 Tài Liệu Tham Khảo
+
+1.  **Ktor Official**: [https://ktor.io/docs/](https://ktor.io/docs/)
+2.  **Exposed ORM**: [https://github.com/JetBrains/Exposed](https://github.com/JetBrains/Exposed)
+3.  **JetBrains Academy**: Các khóa học về Kotlin & Ktor.
+4.  **GitHub Samples**: Search "Ktor project" để xem code mẫu.
+
+---
+
+## ✅ Checklist Bắt Đầu
+- [ ] Vẽ Database Schema trên **dbdiagram.io**.
+- [ ] Liệt kê các Endpoint cần thiết vào một file Doc hoặc Postman.
+- [ ] Khởi tạo Project bằng IntelliJ IDEA (Ktor Project Generator).
+- [ ] Viết file `docker-compose.yml` để nâng database PostgreSQL.
+- [ ] Code chức năng **Auth (Login/Register)** đầu tiên.
