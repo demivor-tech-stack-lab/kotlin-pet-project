@@ -38,6 +38,19 @@ data class BookingResponse(
     val createdAt: LocalDateTime
 )
 
+/**
+ * Khoang thoi gian xe da bi dat. CO Y khong tra ve userId hay bookingId:
+ * day la endpoint cong khai, lo thong tin ai dang thue xe nao la ro ri du lieu ca nhan.
+ */
+@Serializable
+data class BusyPeriodResponse(
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val startAt: LocalDateTime,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val endAt: LocalDateTime,
+    val status: BookingStatus
+)
+
 @Serializable
 data class QuoteResponse(
     val totalDays: Int,

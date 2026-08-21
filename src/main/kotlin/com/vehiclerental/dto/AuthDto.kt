@@ -26,6 +26,17 @@ data class LoginRequest(
 )
 
 @Serializable
+data class RefreshTokenRequest(
+    val refreshToken: String
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    val oldPassword: String,
+    val newPassword: String
+)
+
+@Serializable
 data class UserResponse(
     val id: Long,
     val email: String,
@@ -36,17 +47,32 @@ data class UserResponse(
     val createdAt: LocalDateTime
 )
 
+/**
+ * Trả về CẶP token thay vì một token duy nhất như bản trước:
+ *
+ *  - accessToken  : JWT, sống ngắn (15 phút), gửi kèm mọi request.
+ *                   Không thu hồi được -> phải ngắn.
+ *  - refreshToken : chuỗi ngẫu nhiên, sống 30 ngày, chỉ dùng để xin access token mới.
+ *                   Lưu trong DB nên thu hồi được khi logout / nghi bị lộ.
+ *
+ * Client nên lưu refreshToken ở nơi an toàn nhất có thể (httpOnly cookie với web,
+ * secure storage với mobile), TUYỆT ĐỐI không để trong localStorage.
+ */
 @Serializable
 data class AuthResponse(
-    val token: String,
+    val accessToken: String,
+    val refreshToken: String,
+    val tokenType: String = "Bearer",
     val expiresInSeconds: Long,
     val user: UserResponse
 )
 
+@Serializable
+data class MessageResponse(val message: String)
+
 /**
  * EXTENSION FUNCTION — một trong những thứ Kotlin nhất.
  * Ta "gắn thêm" hàm toResponse() vào lớp User mà không cần sửa lớp User.
- * Bên trong, `this` chính là đối tượng User đang gọi.
  *
  * Đây là chỗ passwordHash bị loại bỏ -> không bao giờ rò rỉ ra API.
  */
