@@ -25,3 +25,17 @@ replay_pid*
 
 # Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
 .kotlin/
+# ---- Bổ sung cho dự án Gradle/Kotlin ----
+build/
+.gradle/
+out/
+bin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# QUAN TRỌNG: *.jar ở trên loại trừ cả gradle-wrapper.jar,
+# nhưng file này BẮT BUỘC phải commit thì người khác mới chạy được ./gradlew
+!gradle/wrapper/gradle-wrapper.jar
