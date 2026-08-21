@@ -1,7 +1,9 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{28} - %msg%n</pattern>
+            <!-- %X{requestId} in ma dinh danh request vao MOI dong log sinh ra trong request do.
+                 Khach bao loi kem ma nay -> grep mot phat la ra toan bo dong doi request. -->
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{28} [%X{requestId:--}] - %msg%n</pattern>
         </encoder>
     </appender>
 

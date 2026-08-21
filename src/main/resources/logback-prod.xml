@@ -1,0 +1,47 @@
+<configuration>
+    <!--
+        LOG DANG JSON CHO PRODUCTION.
+
+        Vi sao khong dung log dang chu nhu o dev?
+        Cong cu thu thap log (Loki, Elasticsearch, CloudWatch...) phan tich JSON
+        duoc ngay, nen ban loc duoc kieu:
+            requestId = "abc-123"     -> xem tron doi mot request
+            level = ERROR AND logger = "BookingService"
+        Con log dang chu thi chi grep duoc chuoi, va mot stacktrace nhieu dong
+        se bi tach thanh nhieu ban ghi roi rac.
+
+        Kich hoat bang: -Dlogback.configurationFile=logback-prod.xml
+        (docker-compose.yml da dat san qua JAVA_TOOL_OPTIONS)
+    -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- requestId duoc plugin CallId dua vao MDC; dong nay keo no ra thanh field JSON -->
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <customFields>{"service":"vehicle-rental-api"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <message>message</message>
+                <thread>thread</thread>
+                <logger>logger</logger>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <!--
+        Ghi log ra STDOUT chu khong ghi ra file.
+        Day la nguyen tac cua ung dung chay trong container: tien trinh chi viec
+        in ra man hinh, con viec luu tru / xoay vong / chuyen di do Docker lo
+        (xem muc `logging` trong docker-compose.yml).
+        Ghi thang ra file trong container se lam day o dia va mat khi container bi thay the.
+    -->
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+    </root>
+
+    <logger name="Exposed" level="WARN"/>
+    <logger name="org.koin" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+    <logger name="org.flywaydb" level="INFO"/>
+</configuration>
