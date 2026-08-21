@@ -1,28 +1,55 @@
+# =====================================================================
+# CAU HINH MAC DINH CHO MOI TRUONG DEV.
+#
+# O production, MOI GIA TRI duoi day deu bi ghi de bang BIEN MOI TRUONG
+# (xem .env.example va docs/DEPLOY.md). File nay khong chua bi mat that su.
+# =====================================================================
 ktor:
   deployment:
     port: 8080
+    # Thoi gian cho xu ly not request dang chay khi nhan tin hieu dung.
+    # Thieu hai tham so nay thi `docker compose down` cat ngang request dang do.
+    shutdownGracePeriod: 3000
+    shutdownTimeout: 15000
   application:
     modules:
       - com.vehiclerental.ApplicationKt.module
 
 app:
-  # true = tu nap du lieu mau khi khoi dong (3 loai xe, 6 xe, 2 tai khoan)
-  seedData: true
+  environment: dev          # APP_ENV
+  seedData: true            # SEED_DATA  (bi ep thanh false o prod)
+  timezone: Asia/Ho_Chi_Minh  # APP_TIMEZONE
 
 database:
   # H2 in-memory: khong can cai dat gi, du lieu mat khi tat app.
-  # DB_CLOSE_DELAY=-1 giu database song chung nao JVM con chay.
-  driver: "org.h2.Driver"
-  url: "jdbc:h2:mem:vehiclerental;DB_CLOSE_DELAY=-1;MODE=PostgreSQL"
-  user: "sa"
-  password: ""
-  poolSize: 10
+  # MODE=PostgreSQL de SQL trong migration chay duoc o ca hai noi.
+  # LOCK_TIMEOUT=10000 cho SELECT ... FOR UPDATE co thoi gian cho hop ly.
+  driver: "org.h2.Driver"                                                        # DB_DRIVER
+  url: "jdbc:h2:mem:vehiclerental;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;LOCK_TIMEOUT=10000;CASE_INSENSITIVE_IDENTIFIERS=TRUE"  # DB_URL
+  user: "sa"                                                                     # DB_USER
+  password: ""                                                                   # DB_PASSWORD
+  poolSize: 10                                                                   # DB_POOL_SIZE
+  connectionTimeoutMs: 10000                                                     # DB_CONNECTION_TIMEOUT_MS
+  leakDetectionThresholdMs: 20000                                                # DB_LEAK_DETECTION_MS
 
 jwt:
-  # DEV ONLY. That su thi phai doc tu bien moi truong:
-  #   secret: "$JWT_SECRET"
-  secret: "doi-chuoi-nay-thanh-secret-cua-ban-toi-thieu-32-ky-tu"
-  issuer: "vehicle-rental-api"
-  audience: "vehicle-rental-users"
-  realm: "Vehicle Rental"
-  expiresInSeconds: 86400
+  # Gia tri nay CO Y de lo lieu - AppConfig se tu choi khoi dong neu thay no o prod.
+  secret: "dev-only-secret-khong-duoc-dung-o-production-32chars"   # JWT_SECRET
+  issuer: "vehicle-rental-api"                                    # JWT_ISSUER
+  audience: "vehicle-rental-users"                                # JWT_AUDIENCE
+  realm: "Vehicle Rental"                                         # JWT_REALM
+  accessTokenTtlSeconds: 900                                      # JWT_ACCESS_TTL_SECONDS  (15 phut)
+  refreshTokenTtlSeconds: 2592000                                 # JWT_REFRESH_TTL_SECONDS (30 ngay)
+
+cors:
+  allowAnyHost: true      # CORS_ALLOW_ANY_HOST - phai la false o prod
+  allowedHosts: ""        # CORS_ALLOWED_HOSTS  - vd "app.example.com,admin.example.com"
+
+rateLimit:
+  enabled: true                 # RATE_LIMIT_ENABLED
+  authRequestsPerMinute: 10     # RATE_LIMIT_AUTH_PER_MINUTE
+  globalRequestsPerMinute: 300  # RATE_LIMIT_GLOBAL_PER_MINUTE
+
+metrics:
+  enabled: true   # METRICS_ENABLED
+  token: ""       # METRICS_TOKEN - de trong thi /metrics khong can xac thuc (chi nen o dev)
