@@ -4,7 +4,9 @@ import com.vehiclerental.domain.exception.AppException
 import com.vehiclerental.domain.model.VehicleStatus
 import com.vehiclerental.dto.CreateVehicleRequest
 import com.vehiclerental.security.requireAdmin
+import com.vehiclerental.service.BookingService
 import com.vehiclerental.service.VehicleService
+import com.vehiclerental.util.enumQuery
 import com.vehiclerental.util.intQuery
 import com.vehiclerental.util.longParam
 import com.vehiclerental.util.stringQuery
@@ -16,29 +18,22 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.math.BigDecimal
 
-fun Route.vehicleRoutes(vehicleService: VehicleService) {
+fun Route.vehicleRoutes(
+    vehicleService: VehicleService,
+    bookingService: BookingService
+) {
 
     // ---------- Public: ai cũng xem được danh sách xe ----------
     route("/api/vehicles") {
 
         get {
             // Ví dụ: /api/vehicles?status=AVAILABLE&keyword=vios&page=1&size=10
-            val status = call.stringQuery("status")?.let { raw ->
-                // enumValues<T>() lấy toàn bộ giá trị của enum; tìm cái khớp tên (không phân biệt hoa thường)
-                enumValues<VehicleStatus>().firstOrNull { it.name.equals(raw, ignoreCase = true) }
-                    ?: throw AppException.BadRequest("status không hợp lệ: $raw")
-            }
-
-            val maxPrice = call.stringQuery("maxPricePerDay")?.let { raw ->
-                raw.toBigDecimalOrNull()
-                    ?: throw AppException.BadRequest("maxPricePerDay phải là số")
-            }
-
             val result = vehicleService.list(
                 typeId = call.stringQuery("typeId")?.toLongOrNull(),
-                status = status,
+                status = call.enumQuery<VehicleStatus>("status"),
                 keyword = call.stringQuery("keyword"),
-                maxPricePerDay = maxPrice,
+                minPricePerDay = call.decimalQuery("minPricePerDay"),
+                maxPricePerDay = call.decimalQuery("maxPricePerDay"),
                 page = call.intQuery("page", 1),
                 size = call.intQuery("size", 10)
             )
@@ -46,17 +41,30 @@ fun Route.vehicleRoutes(vehicleService: VehicleService) {
         }
 
         get("/{id}") {
-            val id = call.longParam("id")
-            call.respond(HttpStatusCode.OK, vehicleService.getById(id))
+            call.respond(HttpStatusCode.OK, vehicleService.getById(call.longParam("id")))
+        }
+
+        /**
+         * Lịch bận của xe — giao diện đặt xe dùng để chặn ngày trước khi người dùng bấm.
+         * Công khai và cố ý không lộ ai đang thuê.
+         */
+        get("/{id}/availability") {
+            call.respond(HttpStatusCode.OK, bookingService.busyPeriods(call.longParam("id")))
         }
     }
 
-    get("/api/vehicle-types") {
-        call.respond(HttpStatusCode.OK, vehicleService.listTypes())
+    route("/api/vehicle-types") {
+        get {
+            call.respond(HttpStatusCode.OK, vehicleService.listTypes())
+        }
+        get("/{id}") {
+            call.respond(HttpStatusCode.OK, vehicleService.getTypeById(call.longParam("id")))
+        }
     }
 
     // ---------- Admin: cần token VÀ role = ADMIN ----------
     authenticate("auth-jwt") {
+
         route("/api/admin/vehicles") {
 
             post {
@@ -77,11 +85,24 @@ fun Route.vehicleRoutes(vehicleService: VehicleService) {
                 call.respond(HttpStatusCode.OK, vehicleService.updateStatus(id, status))
             }
         }
+
+        /** Số liệu tổng quan cho trang quản trị. */
+        get("/api/admin/stats") {
+            call.requireAdmin()
+            call.respond(HttpStatusCode.OK, vehicleService.stats())
+        }
     }
 }
 
+/** Đọc query parameter kiểu tiền tệ, sai định dạng thì 400 thay vì 500. */
+private fun ApplicationCall.decimalQuery(name: String): BigDecimal? =
+    stringQuery(name)?.let { raw ->
+        raw.toBigDecimalOrNull()
+            ?: throw AppException.BadRequest("$name phải là số", "INVALID_NUMBER")
+    }
+
 /**
- * DTO nhỏ chỉ dùng cho đúng một endpoint thì để ngay cạnh endpoint đó cũng được -
+ * DTO nhỏ chỉ dùng cho đúng một endpoint thì để ngay cạnh endpoint đó cũng được —
  * không phải cái gì cũng phải nhét vào package dto.
  */
 @kotlinx.serialization.Serializable

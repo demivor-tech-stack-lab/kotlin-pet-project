@@ -6,8 +6,8 @@ import com.vehiclerental.dto.CreateBookingRequest
 import com.vehiclerental.security.requireAdmin
 import com.vehiclerental.security.requireUser
 import com.vehiclerental.service.BookingService
+import com.vehiclerental.util.enumQuery
 import com.vehiclerental.util.longParam
-import com.vehiclerental.util.stringQuery
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -44,7 +44,7 @@ fun Route.bookingRoutes(bookingService: BookingService) {
              */
             get("/my") {
                 val me = call.requireUser()
-                call.respond(HttpStatusCode.OK, bookingService.listMine(me.id, call.bookingStatusQuery()))
+                call.respond(HttpStatusCode.OK, bookingService.listMine(me.id, call.enumQuery<BookingStatus>("status")))
             }
 
             get("/{id}") {
@@ -63,7 +63,7 @@ fun Route.bookingRoutes(bookingService: BookingService) {
 
             get {
                 call.requireAdmin()
-                call.respond(HttpStatusCode.OK, bookingService.listAll(call.bookingStatusQuery()))
+                call.respond(HttpStatusCode.OK, bookingService.listAll(call.enumQuery<BookingStatus>("status")))
             }
 
             patch("/{id}/confirm") {
@@ -78,15 +78,3 @@ fun Route.bookingRoutes(bookingService: BookingService) {
         }
     }
 }
-
-/**
- * Đọc query ?status=PENDING và đổi sang enum.
- * Tách ra thành extension riêng vì dùng lại ở 2 chỗ - tránh copy/paste.
- */
-private fun ApplicationCall.bookingStatusQuery(): BookingStatus? =
-    stringQuery("status")?.let { raw ->
-        enumValues<BookingStatus>().firstOrNull { it.name.equals(raw, ignoreCase = true) }
-            ?: throw AppException.BadRequest(
-                "status phải là một trong: " + enumValues<BookingStatus>().joinToString { it.name }
-            )
-    }
