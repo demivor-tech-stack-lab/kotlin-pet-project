@@ -1,0 +1,224 @@
+### Vehicle Rental API — bộ ví dụ gọi thử
+### Mở file này trong IntelliJ IDEA (có sẵn) hoặc VS Code + extension "REST Client",
+### rồi bấm nút ▶ phía trên mỗi request.
+### Chạy server trước: gradlew.bat run
+
+@host = http://localhost:8080
+
+### ---------------------------------------------------------------- HEALTH
+GET {{host}}/api/health
+
+### ---------------------------------------------------------------- ĐĂNG NHẬP ADMIN
+# @name loginAdmin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@vehiclerental.com",
+  "password": "123456"
+}
+
+### Lưu token admin lại để các request sau dùng
+@adminToken = {{loginAdmin.response.body.token}}
+
+### ---------------------------------------------------------------- ĐĂNG NHẬP KHÁCH
+# @name loginCustomer
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "khach@vehiclerental.com",
+  "password": "123456"
+}
+
+### @name customerToken
+@customerToken = {{loginCustomer.response.body.token}}
+
+### ---------------------------------------------------------------- ĐĂNG KÝ MỚI
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "toi@example.com",
+  "password": "matkhau123",
+  "fullName": "Nguyen Van A",
+  "phone": "0912345678"
+}
+
+### Đăng ký với mật khẩu yếu -> 400 WEAK_PASSWORD
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "yeu@example.com",
+  "password": "123",
+  "fullName": "B",
+  "phone": "0912345678"
+}
+
+### ---------------------------------------------------------------- TÔI LÀ AI
+GET {{host}}/api/auth/me
+Authorization: Bearer {{customerToken}}
+
+### Gọi mà không có token -> 401
+GET {{host}}/api/auth/me
+
+### ---------------------------------------------------------------- XE
+GET {{host}}/api/vehicle-types
+
+### Toàn bộ xe
+GET {{host}}/api/vehicles
+
+### Phân trang
+GET {{host}}/api/vehicles?page=1&size=2
+
+### Lọc: chỉ xe đang rảnh, thuộc loại 2, giá tối đa 800k
+GET {{host}}/api/vehicles?status=AVAILABLE&typeId=2&maxPricePerDay=800000
+
+### Tìm theo từ khóa (brand / model / biển số)
+GET {{host}}/api/vehicles?keyword=toyota
+
+### Chi tiết một xe
+GET {{host}}/api/vehicles/3
+
+### Xe không tồn tại -> 404
+GET {{host}}/api/vehicles/999999
+
+### ---------------------------------------------------------------- ADMIN: THÊM XE
+POST {{host}}/api/admin/vehicles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "plateNumber": "51H-99999",
+  "brand": "Kia",
+  "model": "Morning",
+  "year": 2023,
+  "typeId": 2,
+  "pricePerDay": "550000"
+}
+
+### Khách thường thêm xe -> 403 FORBIDDEN
+POST {{host}}/api/admin/vehicles
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "plateNumber": "51H-88888",
+  "brand": "Kia",
+  "model": "Morning",
+  "year": 2023,
+  "typeId": 2,
+  "pricePerDay": "550000"
+}
+
+### ADMIN: cho xe vào bảo dưỡng
+PATCH {{host}}/api/admin/vehicles/1/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "MAINTENANCE"
+}
+
+### ---------------------------------------------------------------- BÁO GIÁ
+POST {{host}}/api/bookings/quote
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": 3,
+  "startAt": "2026-12-01T08:00:00",
+  "endAt": "2026-12-04T08:00:00"
+}
+
+### ---------------------------------------------------------------- ĐẶT XE
+# @name createBooking
+POST {{host}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": 3,
+  "startAt": "2026-12-01T08:00:00",
+  "endAt": "2026-12-04T08:00:00",
+  "note": "Nhan xe tai san bay"
+}
+
+### @name bookingId
+@bookingId = {{createBooking.response.body.id}}
+
+### Đặt trùng lịch -> 409 BOOKING_OVERLAP
+POST {{host}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": 3,
+  "startAt": "2026-12-02T08:00:00",
+  "endAt": "2026-12-05T08:00:00"
+}
+
+### Thời gian ngược -> 400 INVALID_PERIOD
+POST {{host}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": 3,
+  "startAt": "2026-12-05T08:00:00",
+  "endAt": "2026-12-01T08:00:00"
+}
+
+### Đặt quá 30 ngày -> 400 PERIOD_TOO_LONG
+POST {{host}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": 4,
+  "startAt": "2026-12-01T08:00:00",
+  "endAt": "2027-02-01T08:00:00"
+}
+
+### ---------------------------------------------------------------- XEM ĐƠN
+GET {{host}}/api/bookings/my
+Authorization: Bearer {{customerToken}}
+
+### Lọc theo trạng thái
+GET {{host}}/api/bookings/my?status=PENDING
+Authorization: Bearer {{customerToken}}
+
+### Chi tiết đơn
+GET {{host}}/api/bookings/{{bookingId}}
+Authorization: Bearer {{customerToken}}
+
+### ---------------------------------------------------------------- ADMIN DUYỆT ĐƠN
+GET {{host}}/api/admin/bookings
+Authorization: Bearer {{adminToken}}
+
+### Duyệt: PENDING -> CONFIRMED (xe chuyển sang RENTED)
+PATCH {{host}}/api/admin/bookings/{{bookingId}}/confirm
+Authorization: Bearer {{adminToken}}
+
+### Kiểm chứng: xe 3 giờ phải là RENTED
+GET {{host}}/api/vehicles/3
+
+### Tất toán: CONFIRMED -> COMPLETED (xe về AVAILABLE)
+PATCH {{host}}/api/admin/bookings/{{bookingId}}/complete
+Authorization: Bearer {{adminToken}}
+
+### Tất toán lần 2 -> 409 INVALID_STATE
+PATCH {{host}}/api/admin/bookings/{{bookingId}}/complete
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------------------- HỦY ĐƠN
+PATCH {{host}}/api/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{customerToken}}
+
+### ---------------------------------------------------------------- LỖI KHÁC
+### Endpoint không tồn tại -> 404 ROUTE_NOT_FOUND
+GET {{host}}/api/khong-ton-tai
+
+### id không phải số -> 400
+GET {{host}}/api/vehicles/abc
